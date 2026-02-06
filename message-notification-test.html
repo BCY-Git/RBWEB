@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>消息通知系统调试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .message-list {
+            margin-top: 20px;
+        }
+
+        .message-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+
+        .message-item.unread {
+            background-color: #fff3cd;
+        }
+
+        .message-item .title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .message-item .content {
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .message-item .meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .status.unread {
+            background-color: #dc3545;
+            color: #fff;
+        }
+
+        .status.read {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        .connection-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .connection-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .notification {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>消息通知系统调试页面</h1>
+
+        <!-- Token设置 -->
+        <div class="section">
+            <h2>Token设置</h2>
+            <div class="form-group">
+                <label for="token">Bearer Token:</label>
+                <input type="text" id="token" placeholder="请输入Bearer Token">
+            </div>
+            <button onclick="saveToken()">保存Token</button>
+            <button onclick="clearToken()">清除Token</button>
+        </div>
+
+        <!-- SSE连接 -->
+        <div class="section">
+            <h2>SSE实时推送</h2>
+            <div id="connectionStatus" class="connection-status disconnected">未连接</div>
+            <button id="connectBtn" onclick="connectSSE()">连接SSE</button>
+            <button id="disconnectBtn" onclick="disconnectSSE()" disabled>断开连接</button>
+            <div id="sseNotifications" class="message-list"></div>
+        </div>
+
+        <!-- 未读消息数量 -->
+        <div class="section">
+            <h2>未读消息数量</h2>
+            <button onclick="getUnreadCount()">获取未读数量</button>
+            <div id="unreadCountResult" class="result"></div>
+        </div>
+
+        <!-- 消息列表 -->
+        <div class="section">
+            <h2>消息列表</h2>
+            <div class="form-group">
+                <label for="pageNum">页码:</label>
+                <input type="number" id="pageNum" value="1" min="1">
+            </div>
+            <div class="form-group">
+                <label for="pageSize">每页数量:</label>
+                <input type="number" id="pageSize" value="10" min="1" max="100">
+            </div>
+            <div class="form-group">
+                <label for="type">通知类型:</label>
+                <select id="type">
+                    <option value="">全部</option>
+                    <option value="1">点赞</option>
+                    <option value="2">收藏</option>
+                    <option value="3">评论</option>
+                    <option value="4">@</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="sourceType">来源类型:</label>
+                <select id="sourceType">
+                    <option value="">全部</option>
+                    <option value="1">任务</option>
+                    <option value="2">评论</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="isUnread">是否只查询未读:</label>
+                <select id="isUnread">
+                    <option value="">全部</option>
+                    <option value="1">只查未读</option>
+                </select>
+            </div>
+            <button onclick="getMessageList()">查询消息列表</button>
+            <div id="messageListResult" class="result"></div>
+            <div id="messageListDisplay" class="message-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        // 保存Token
+        function saveToken() {
+            const token = document.getElementById('token').value;
+            if (token) {
+                localStorage.setItem('token', token);
+                alert('Token已保存');
+            } else {
+                alert('请输入Token');
+            }
+        }
+
+        // 清除Token
+        function clearToken() {
+            localStorage.removeItem('token');
+            document.getElementById('token').value = '';
+            alert('Token已清除');
+        }
+
+        // 获取Token
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        // 初始化加载Token
+        window.onload = function() {
+            const token = getToken();
+            if (token) {
+                document.getElementById('token').value = token;
+            }
+        };
+
+        // 连接SSE
+        function connectSSE() {
+            const token = getToken();
+            if (!token) {
+                alert('请先设置Token');
+                return;
+            }
+
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const sseUrl = 'http://localhost:86/sse/connect?token=' + encodeURIComponent(token);
+            console.log('尝试连接SSE:', sseUrl);
+
+            try {
+                eventSource = new EventSource(sseUrl);
+                console.log('EventSource对象已创建:', eventSource);
+
+                eventSource.onopen = function(event) {
+                    console.log('SSE onopen 事件触发:', event);
+                };
+
+                eventSource.addEventListener('connected', function(event) {
+                    console.log('SSE connected 事件触发:', event);
+                    document.getElementById('connectionStatus').textContent = '已连接';
+                    document.getElementById('connectionStatus').className = 'connection-status connected';
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    
+                    const notification = document.createElement('div');
+                    notification.className = 'notification';
+                    notification.textContent = 'SSE连接已建立';
+                    document.getElementById('sseNotifications').appendChild(notification);
+                });
+
+                eventSource.onmessage = function(event) {
+                    console.log('SSE onmessage 事件触发:', event);
+                    const notification = document.createElement('div');
+                    notification.className = 'notification';
+                    notification.textContent = '收到消息: ' + event.data;
+                    document.getElementById('sseNotifications').appendChild(notification);
+                };
+
+                eventSource.onerror = function(event) {
+                    console.error('SSE onerror 事件触发:', event);
+                    console.error('EventSource readyState:', eventSource.readyState);
+                    
+                    document.getElementById('connectionStatus').textContent = '连接错误';
+                    document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    
+                    // 如果连接失败，关闭连接
+                    if (eventSource.readyState === EventSource.CLOSED) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                };
+            } catch (error) {
+                console.error('创建EventSource失败:', error);
+                alert('创建SSE连接失败: ' + error.message);
+            }
+        }
+
+        // 断开SSE连接
+        function disconnectSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                document.getElementById('connectionStatus').textContent = '未连接';
+                document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                console.log('SSE连接已断开');
+            }
+        }
+
+        // 获取未读消息数量
+        function getUnreadCount() {
+            const token = getToken();
+            if (!token) {
+                alert('请先设置Token');
+                return;
+            }
+
+            fetch('http://localhost:86/xr_daily_messages/unreadCount', {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('unreadCountResult').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('unreadCountResult').textContent = '错误: ' + error.message;
+            });
+        }
+
+        // 查询消息列表
+        function getMessageList() {
+            const token = getToken();
+            if (!token) {
+                alert('请先设置Token');
+                return;
+            }
+
+            const pageNum = document.getElementById('pageNum').value;
+            const pageSize = document.getElementById('pageSize').value;
+            const type = document.getElementById('type').value;
+            const sourceType = document.getElementById('sourceType').value;
+            const isUnread = document.getElementById('isUnread').value;
+
+            let url = `http://localhost:86/xr_daily_messages/page?pageNum=${pageNum}&pageSize=${pageSize}`;
+            if (type) url += `&type=${type}`;
+            if (sourceType) url += `&sourceType=${sourceType}`;
+            if (isUnread) url += `&isUnread=${isUnread}`;
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('messageListResult').textContent = JSON.stringify(data, null, 2);
+                displayMessageList(data);
+                getUnreadCount();
+            })
+            .catch(error => {
+                document.getElementById('messageListResult').textContent = '错误: ' + error.message;
+            });
+        }
+
+        // 显示消息列表
+        function displayMessageList(data) {
+            const container = document.getElementById('messageListDisplay');
+            container.innerHTML = '';
+
+            if (data.code === 200 && data.data && data.data.records) {
+                data.data.records.forEach(message => {
+                    const item = document.createElement('div');
+                    item.className = 'message-item' + (message.isRead === 0 ? ' unread' : '');
+                    item.innerHTML = `
+                        <div class="title">
+                            ${message.title}
+                            <span class="status ${message.isRead === 0 ? 'unread' : 'read'}">
+                                ${message.isRead === 0 ? '未读' : '已读'}
+                            </span>
+                            ${message.justMarkedAsRead ? '<span style="color: #dc3545; margin-left: 10px;">(本次查询已标记为已读)</span>' : ''}
+                        </div>
+                        <div class="content">${message.content || '无内容'}</div>
+                        <div class="meta">
+                            操作者: ${message.actorName} | 
+                            时间: ${message.createTime}
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                container.innerHTML = '<p>暂无消息</p>';
+            }
+        }
+    </script>
+</body>
+</html>
