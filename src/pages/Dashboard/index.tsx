@@ -1,87 +1,77 @@
-import { Home, LineChart, FolderKanban, Users, Settings, Search } from 'lucide-react'
-import styles from './index.module.scss'
+import { useState, useEffect } from 'react'
+import { Home, LineChart, FolderKanban, Users, Settings, Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
+
+const DAILY_REPORT_BASE = '/dashboard/daily-report'
 
 export default function Dashboard() {
+  const location = useLocation()
+  const [dailyReportOpen, setDailyReportOpen] = useState(false)
+
+  useEffect(() => {
+    if (location.pathname.startsWith(DAILY_REPORT_BASE)) setDailyReportOpen(true)
+  }, [location.pathname])
+
   return (
-    <div className={styles.dashboard}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>Acme Inc.</div>
-        <nav className={styles.nav}>
-          <div className={`${styles.item} ${styles.active}`}><Home size={18} /> Dashboard</div>
-          <div className={styles.item}><LineChart size={18} /> Analytics</div>
-          <div className={styles.item}><FolderKanban size={18} /> Projects</div>
-          <div className={styles.item}><Users size={18} /> Team</div>
+    <div className="flex h-screen w-full bg-zinc-950 text-white font-sans">
+      <aside className="w-[250px] border-r border-zinc-800 flex flex-col bg-zinc-950">
+        <div className="h-[60px] flex items-center px-6 font-semibold text-lg border-b border-zinc-800">Acme Inc.</div>
+        <nav className="flex-1 p-4 flex flex-col gap-2">
+          <NavLink 
+            to="/dashboard" 
+            end
+            className={({ isActive }) => `flex items-center gap-3 p-3 rounded-md cursor-pointer transition-all duration-200 text-sm ${isActive ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+          >
+            <Home size={18} /> Dashboard
+          </NavLink>
+          <div className="rounded-md overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDailyReportOpen((o) => !o)}
+              className={`flex items-center gap-3 w-full p-3 rounded-md cursor-pointer transition-all duration-200 text-sm ${location.pathname.startsWith(DAILY_REPORT_BASE) ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+            >
+              <LineChart size={18} />
+              <span className="flex-1 text-left">日报内容</span>
+              {dailyReportOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            {dailyReportOpen && (
+              <div className="flex flex-col gap-0.5 pl-4 py-1">
+                <NavLink
+                  to={DAILY_REPORT_BASE}
+                  end
+                  className={({ isActive }) => `flex items-center gap-2 py-2.5 px-3 rounded-md text-sm transition-all duration-200 ${isActive ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                >
+                  日报列表
+                </NavLink>
+                <NavLink
+                  to={`${DAILY_REPORT_BASE}/new`}
+                  className={({ isActive }) => `flex items-center gap-2 py-2.5 px-3 rounded-md text-sm transition-all duration-200 ${isActive ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                >
+                  写日报
+                </NavLink>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-md text-zinc-400 cursor-pointer transition-all duration-200 text-sm hover:text-white hover:bg-zinc-800"><FolderKanban size={18} /> 项目</div>
+          <div className="flex items-center gap-3 p-3 rounded-md text-zinc-400 cursor-pointer transition-all duration-200 text-sm hover:text-white hover:bg-zinc-800"><Users size={18} /> 团队</div>
         </nav>
-        <div className={styles.bottom}>
-          <div className={styles.item}><Settings size={18} /> Settings</div>
-          <div className={styles.item}><Search size={18} /> Search</div>
+        <div className="p-4 border-t border-zinc-800">
+          <div className="flex items-center gap-3 p-3 text-zinc-400 cursor-pointer text-sm hover:text-white"><Settings size={18} /> Settings</div>
+          <div className="flex items-center gap-3 p-3 text-zinc-400 cursor-pointer text-sm hover:text-white"><Search size={18} /> Search</div>
         </div>
       </aside>
 
-      <section className={styles.content}>
-        <header className={styles.header}>
-          <div className={styles.title}>Documents</div>
-          <div className={styles.actions}>
-            <button className={styles.btn}>Last 3 months</button>
-            <button className={styles.btn}>Last 30 days</button>
-            <button className={styles.btn}>Last 7 days</button>
+      <section className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-[60px] border-b border-zinc-800 flex items-center justify-between px-8">
+          <div className="text-xl font-semibold">Documents</div>
+          <div className="flex gap-2">
+            <button className="bg-transparent border border-zinc-800 text-white px-4 py-2 rounded-md text-sm cursor-pointer transition-colors duration-200 hover:bg-zinc-800">Last 3 months</button>
+            <button className="bg-transparent border border-zinc-800 text-white px-4 py-2 rounded-md text-sm cursor-pointer transition-colors duration-200 hover:bg-zinc-800">Last 30 days</button>
+            <button className="bg-transparent border border-zinc-800 text-white px-4 py-2 rounded-md text-sm cursor-pointer transition-colors duration-200 hover:bg-zinc-800">Last 7 days</button>
           </div>
         </header>
 
-        <main className={styles.main}>
-          <div className={styles.cards}>
-            <div className={styles.card}>
-              <div className={styles.label}>Total Revenue</div>
-              <div className={styles.value}>$1,250.00</div>
-            </div>
-            <div className={styles.card}>
-              <div className={styles.label}>New Customers</div>
-              <div className={styles.value}>1,234</div>
-            </div>
-            <div className={styles.card}>
-              <div className={styles.label}>Active Accounts</div>
-              <div className={styles.value}>45,678</div>
-            </div>
-            <div className={styles.card}>
-              <div className={styles.label}>Growth Rate</div>
-              <div className={styles.value}>4.5%</div>
-            </div>
-          </div>
-
-          <div className={styles.chart} />
-
-          <div className={styles.table}>
-            <div className={styles.toolbar}>
-              <div className={`${styles.tab} ${styles.active}`}>Outline</div>
-              <div className={styles.tab}>Past Performance</div>
-              <div className={styles.tab}>Key Personnel</div>
-              <div className={styles.tab}>Focus Documents</div>
-            </div>
-            <div className={styles.rows}>
-              <div className={styles.row}>
-                <div>Cover page</div>
-                <div>Cover page</div>
-                <div>In Process</div>
-                <div>18</div>
-                <div>Eddie Lake</div>
-              </div>
-              <div className={styles.row}>
-                <div>Table of contents</div>
-                <div>Table of contents</div>
-                <div>Done</div>
-                <div>29</div>
-                <div>Eddie Lake</div>
-              </div>
-              <div className={styles.row}>
-                <div>Executive summary</div>
-                <div>Narrative</div>
-                <div>Done</div>
-                <div>10</div>
-                <div>Eddie Lake</div>
-              </div>
-            </div>
-          </div>
-        </main>
+        <Outlet />
       </section>
     </div>
   )
